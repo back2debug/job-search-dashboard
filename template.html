@@ -1,0 +1,1266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Job Search Dashboard — Tracey Martin</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #222639;
+    --border: #2e3250;
+    --accent: #7c6af7;
+    --accent2: #4fc3f7;
+    --accent3: #f06292;
+    --accent4: #66bb6a;
+    --accent5: #ffa726;
+    --text: #e8eaf6;
+    --text-muted: #8892b0;
+    --text-dim: #4a5270;
+    --linkedin: #5b6fa8;
+    --new-strat: #7c6af7;
+    --positive: #66bb6a;
+    --warning: #ffa726;
+    --danger: #ef5350;
+    --radius: 12px;
+    --radius-sm: 8px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  .header {
+    background: linear-gradient(135deg, #1a1d27 0%, #12152a 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 28px 40px 24px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+  }
+
+  .header-left h1 {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+    color: var(--text);
+  }
+
+  .header-left p {
+    color: var(--text-muted);
+    font-size: 13px;
+    margin-top: 4px;
+  }
+
+  .header-badge {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 6px 14px;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  .phase-bar {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    padding: 0 40px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .phase-segment {
+    padding: 10px 20px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    border-right: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .phase-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
+
+  .phase-linkedin { color: #8892b0; }
+  .phase-linkedin .phase-dot { background: #5b6fa8; }
+  .phase-transition { color: #8892b0; }
+  .phase-transition .phase-dot { background: #4a5270; }
+  .phase-new { color: var(--accent); }
+  .phase-new .phase-dot { background: var(--accent); }
+
+  .main {
+    padding: 28px 40px;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+
+  .section-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 14px;
+    margin-top: 8px;
+  }
+
+  /* KPI ROW */
+  .kpi-row {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 12px;
+    margin-bottom: 28px;
+  }
+
+  .kpi {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px 16px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .kpi::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+  }
+
+  .kpi.total::before { background: var(--accent); }
+  .kpi.positive::before { background: var(--positive); }
+  .kpi.warning::before { background: var(--warning); }
+  .kpi.danger::before { background: var(--danger); }
+  .kpi.info::before { background: var(--accent2); }
+  .kpi.neutral::before { background: var(--text-dim); }
+
+  .kpi-value {
+    font-size: 32px;
+    font-weight: 800;
+    line-height: 1;
+    margin-bottom: 4px;
+    letter-spacing: -1px;
+  }
+
+  .kpi.total .kpi-value { color: var(--accent); }
+  .kpi.positive .kpi-value { color: var(--positive); }
+  .kpi.warning .kpi-value { color: var(--warning); }
+  .kpi.danger .kpi-value { color: var(--danger); }
+  .kpi.info .kpi-value { color: var(--accent2); }
+  .kpi.neutral .kpi-value { color: var(--text-muted); }
+
+  .kpi-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .kpi-sub {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-top: 6px;
+  }
+
+  /* GRID LAYOUTS */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .grid-2-1 { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .grid-1-2 { display: grid; grid-template-columns: 1fr 2fr; gap: 16px; margin-bottom: 16px; }
+  .grid-3-2 { display: grid; grid-template-columns: 3fr 2fr; gap: 16px; margin-bottom: 16px; }
+
+  /* CARD */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+  }
+
+  .card-title {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-muted);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .card-title .tag {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 1px 7px;
+    font-size: 10px;
+    color: var(--text-dim);
+    text-transform: none;
+    letter-spacing: 0;
+    font-weight: 500;
+  }
+
+  /* CHART CONTAINERS */
+  .chart-wrap {
+    position: relative;
+  }
+
+  /* PHASE COMPARISON */
+  .phase-compare {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .phase-box {
+    border-radius: var(--radius-sm);
+    padding: 16px;
+    border: 1px solid var(--border);
+  }
+
+  .phase-box.linkedin-box {
+    background: rgba(91, 111, 168, 0.08);
+    border-color: rgba(91, 111, 168, 0.3);
+  }
+
+  .phase-box.new-box {
+    background: rgba(124, 106, 247, 0.08);
+    border-color: rgba(124, 106, 247, 0.3);
+  }
+
+  .phase-box-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-bottom: 12px;
+  }
+
+  .linkedin-box .phase-box-label { color: #8892b0; }
+  .new-box .phase-box-label { color: var(--accent); }
+
+  .phase-stat {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 5px 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .phase-stat:last-child { border-bottom: none; }
+
+  .phase-stat-label {
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  .phase-stat-val {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  /* FUNNEL */
+  .funnel {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .funnel-step {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .funnel-bar-wrap {
+    flex: 1;
+    height: 32px;
+    background: var(--surface2);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    position: relative;
+  }
+
+  .funnel-bar {
+    height: 100%;
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    padding: 0 10px;
+    font-size: 12px;
+    font-weight: 600;
+    color: white;
+    white-space: nowrap;
+    transition: width 0.8s ease;
+  }
+
+  .funnel-label {
+    width: 110px;
+    font-size: 11px;
+    color: var(--text-muted);
+    text-align: right;
+  }
+
+  .funnel-count {
+    width: 36px;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text);
+    text-align: right;
+  }
+
+  .funnel-pct {
+    width: 44px;
+    font-size: 11px;
+    color: var(--text-dim);
+    text-align: left;
+  }
+
+  /* INSIGHTS */
+  .insights-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .insight {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 14px 16px;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+
+  .insight-icon {
+    font-size: 22px;
+    line-height: 1;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  .insight-body {}
+
+  .insight-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 4px;
+    line-height: 1.3;
+  }
+
+  .insight-text {
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.5;
+  }
+
+  .insight-text strong {
+    color: var(--text);
+    font-weight: 600;
+  }
+
+  .insight.highlight {
+    border-color: rgba(124, 106, 247, 0.4);
+    background: rgba(124, 106, 247, 0.06);
+  }
+
+  .insight.positive {
+    border-color: rgba(102, 187, 106, 0.4);
+    background: rgba(102, 187, 106, 0.05);
+  }
+
+  .insight.caution {
+    border-color: rgba(255, 167, 38, 0.35);
+    background: rgba(255, 167, 38, 0.05);
+  }
+
+  .insight.alert {
+    border-color: rgba(240, 98, 146, 0.35);
+    background: rgba(240, 98, 146, 0.05);
+  }
+
+  /* STAT TABLE */
+  .stat-table { width: 100%; border-collapse: collapse; }
+
+  .stat-table th {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-dim);
+    padding: 6px 10px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .stat-table th.right { text-align: right; }
+
+  .stat-table td {
+    padding: 7px 10px;
+    font-size: 12px;
+    color: var(--text-muted);
+    border-bottom: 1px solid rgba(46, 50, 80, 0.5);
+  }
+
+  .stat-table td.right { text-align: right; }
+
+  .stat-table tr:last-child td { border-bottom: none; }
+
+  .stat-table tr:hover td { background: rgba(255,255,255,0.02); }
+
+  .stat-table td.month { font-weight: 600; color: var(--text); }
+
+  .stat-table td .pill {
+    display: inline-block;
+    padding: 1px 7px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  .pill-linkedin { background: rgba(91,111,168,0.2); color: #8892b0; }
+  .pill-trans { background: rgba(74,82,112,0.2); color: var(--text-dim); }
+  .pill-new { background: rgba(124,106,247,0.2); color: var(--accent); }
+  .pill-resume { background: rgba(102,187,106,0.15); color: var(--positive); }
+
+  .bar-inline {
+    display: inline-block;
+    height: 6px;
+    border-radius: 3px;
+    vertical-align: middle;
+    margin-right: 6px;
+  }
+
+  /* ROLE CHART */
+  .role-list { display: flex; flex-direction: column; gap: 7px; }
+
+  .role-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .role-name {
+    width: 130px;
+    font-size: 12px;
+    color: var(--text-muted);
+    flex-shrink: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .role-bars {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .role-bar-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .role-bar-seg {
+    height: 8px;
+    border-radius: 2px;
+  }
+
+  .role-bar-label {
+    font-size: 10px;
+    color: var(--text-dim);
+    width: 20px;
+  }
+
+  /* DIFF BADGE */
+  .diff {
+    font-size: 11px;
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-weight: 600;
+  }
+
+  .diff-up { background: rgba(102,187,106,0.15); color: var(--positive); }
+  .diff-down { background: rgba(239,83,80,0.15); color: var(--danger); }
+  .diff-neutral { background: rgba(74,82,112,0.2); color: var(--text-dim); }
+
+  /* RATE METER */
+  .rate-meter {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .rate-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .rate-label {
+    width: 80px;
+    font-size: 11px;
+    color: var(--text-muted);
+    flex-shrink: 0;
+  }
+
+  .rate-track {
+    flex: 1;
+    height: 10px;
+    background: var(--surface2);
+    border-radius: 5px;
+    overflow: hidden;
+  }
+
+  .rate-fill {
+    height: 100%;
+    border-radius: 5px;
+  }
+
+  .rate-pct {
+    width: 38px;
+    text-align: right;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text);
+    flex-shrink: 0;
+  }
+
+  /* IN PLAY ALERT */
+  .inplay-alert {
+    background: linear-gradient(135deg, rgba(124,106,247,0.12) 0%, rgba(79,195,247,0.08) 100%);
+    border: 1px solid rgba(124,106,247,0.4);
+    border-radius: var(--radius);
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+
+  .inplay-num {
+    font-size: 48px;
+    font-weight: 900;
+    color: var(--accent);
+    line-height: 1;
+    letter-spacing: -2px;
+  }
+
+  .inplay-text h3 {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+
+  .inplay-text p {
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  .divider {
+    width: 1px;
+    height: 50px;
+    background: rgba(124,106,247,0.3);
+    flex-shrink: 0;
+  }
+
+  .inplay-breakdown {
+    display: flex;
+    gap: 20px;
+  }
+
+  .inplay-item {
+    text-align: center;
+  }
+
+  .inplay-item-val {
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--text);
+  }
+
+  .inplay-item-label {
+    font-size: 10px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  footer {
+    text-align: center;
+    padding: 20px;
+    font-size: 11px;
+    color: var(--text-dim);
+    border-top: 1px solid var(--border);
+    margin-top: 12px;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <h1>Job Search Dashboard</h1>
+    <p>Tracey Martin &nbsp;·&nbsp; __DATE_RANGE__ &nbsp;·&nbsp; __TOTAL_APPS__ applications across __MONTH_COUNT__ months</p>
+  </div>
+  <div class="header-badge">__GENERATED_DATE__</div>
+</div>
+
+<div class="phase-bar">
+  <div class="phase-segment phase-linkedin">
+    <div class="phase-dot"></div>
+    LinkedIn Era &nbsp;·&nbsp; __LI_DATE_RANGE__ &nbsp;·&nbsp; __LI_APPS__ apps
+  </div>
+  <div class="phase-segment phase-transition">
+    <div class="phase-dot"></div>
+    Wind-down &nbsp;·&nbsp; __TRANS_DATE__ &nbsp;·&nbsp; __TRANS_APPS__ apps
+  </div>
+  <div class="phase-segment phase-new">
+    <div class="phase-dot"></div>
+    New Strategy &nbsp;·&nbsp; __NS_DATE_RANGE__ &nbsp;·&nbsp; __NS_APPS__ apps
+  </div>
+  <div class="phase-segment" style="border-right:none; color: var(--positive); margin-left: auto;">
+    <div class="phase-dot" style="background: var(--positive);"></div>
+    Specialized Resumes &nbsp;·&nbsp; __RESUME_MONTH__+
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- IN PLAY ALERT -->
+  <div class="inplay-alert">
+    <div class="inplay-num">__IN_PLAY_TOTAL__</div>
+    <div class="inplay-text">
+      <h3>Active Opportunities In Play</h3>
+      <p>__IN_PLAY_DESC__</p>
+    </div>
+    <div class="divider"></div>
+    <div class="inplay-breakdown">
+      <div class="inplay-item">
+        <div class="inplay-item-val">__RECRUITER_TOTAL__</div>
+        <div class="inplay-item-label">Recruiter<br>contacts</div>
+      </div>
+      <div class="inplay-item">
+        <div class="inplay-item-val">__HIRING_TOTAL__</div>
+        <div class="inplay-item-label">Hiring<br>stage</div>
+      </div>
+      <div class="inplay-item">
+        <div class="inplay-item-val">__TEST_TOTAL__</div>
+        <div class="inplay-item-label">Skills<br>tests</div>
+      </div>
+      <div class="inplay-item">
+        <div class="inplay-item-val">__FOLLOWUP_TOTAL__</div>
+        <div class="inplay-item-label">Follow-up<br>rounds</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- KPI ROW -->
+  <div class="section-label">Key Metrics</div>
+  <div class="kpi-row">
+    <div class="kpi total">
+      <div class="kpi-value">__TOTAL_APPS__</div>
+      <div class="kpi-label">Total Applications</div>
+      <div class="kpi-sub">__DATE_RANGE__</div>
+    </div>
+    <div class="kpi positive">
+      <div class="kpi-value">__NS_RESPONSE_RATE__</div>
+      <div class="kpi-label">Response Rate</div>
+      <div class="kpi-sub">New strategy era ↑ from __LI_RESPONSE_RATE__</div>
+    </div>
+    <div class="kpi positive">
+      <div class="kpi-value">__NS_ADV_RATE__</div>
+      <div class="kpi-label">Advancement Rate</div>
+      <div class="kpi-sub">New strategy era ↑ from __LI_ADV_RATE__</div>
+    </div>
+    <div class="kpi warning">
+      <div class="kpi-value">__RECRUITER_TO_HIRING__</div>
+      <div class="kpi-label">Recruiter → Hiring</div>
+      <div class="kpi-sub">__HIRING_TO_FOLLOWUP__ continue to peer/team rounds</div>
+    </div>
+    <div class="kpi danger">
+      <div class="kpi-value">__SNHA_TOTAL__</div>
+      <div class="kpi-label">Shouldn't Have Applied</div>
+      <div class="kpi-sub">__SNHA_PCT__ of all apps; __LI_SNHA_PCT_ROUND__ in LinkedIn era</div>
+    </div>
+    <div class="kpi neutral">
+      <div class="kpi-value">__REJECTION_TOTAL__</div>
+      <div class="kpi-label">Rejections</div>
+      <div class="kpi-sub">__REJECTION_PCT__ explicit rejection rate</div>
+    </div>
+  </div>
+
+  <!-- MONTHLY CHART + FUNNEL -->
+  <div class="section-label">Activity &amp; Pipeline</div>
+  <div class="grid-3-2">
+    <div class="card">
+      <div class="card-title">Applications by Month <span class="tag">bars = apps · lines = response stages</span></div>
+      <div class="chart-wrap" style="height: 220px;">
+        <canvas id="monthlyChart"></canvas>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Overall Conversion Funnel</div>
+      <div class="funnel">
+        <div class="funnel-step">
+          <div class="funnel-label">Applied</div>
+          <div class="funnel-bar-wrap">
+            <div class="funnel-bar" style="width:100%; background: linear-gradient(90deg, #4a5270, #5b6fa8);">__TOTAL_APPS__ applications</div>
+          </div>
+          <div class="funnel-count">__TOTAL_APPS__</div>
+          <div class="funnel-pct" style="color:var(--text-muted)">100%</div>
+        </div>
+        <div class="funnel-step">
+          <div class="funnel-label">Recruiter</div>
+          <div class="funnel-bar-wrap">
+            <div class="funnel-bar" style="width:__FUNNEL_RECRUITER_CSS__; background: linear-gradient(90deg, #7c6af7, #9b8ff9); min-width: 90px;">__FUNNEL_RECRUITER_LABEL__</div>
+          </div>
+          <div class="funnel-count">__RECRUITER_TOTAL__</div>
+          <div class="funnel-pct">__OUTCOME_RECRUITER_PCT__</div>
+        </div>
+        <div class="funnel-step">
+          <div class="funnel-label">Hiring Stage</div>
+          <div class="funnel-bar-wrap">
+            <div class="funnel-bar" style="width:__FUNNEL_HIRING_CSS__; background: linear-gradient(90deg, #4fc3f7, #81d4fa); min-width: 75px;">__FUNNEL_HIRING_LABEL__</div>
+          </div>
+          <div class="funnel-count">__HIRING_TOTAL__</div>
+          <div class="funnel-pct">__FUNNEL_HIRING_PCT__</div>
+        </div>
+        <div class="funnel-step">
+          <div class="funnel-label">Follow-up Rounds</div>
+          <div class="funnel-bar-wrap">
+            <div class="funnel-bar" style="width:__FUNNEL_FOLLOWUP_CSS__; background: linear-gradient(90deg, #f06292, #f48fb1); min-width: 68px;">__FUNNEL_FOLLOWUP_LABEL__</div>
+          </div>
+          <div class="funnel-count">__FOLLOWUP_TOTAL__</div>
+          <div class="funnel-pct">__FUNNEL_FOLLOWUP_PCT__</div>
+        </div>
+        <div class="funnel-step">
+          <div class="funnel-label">Skills Test</div>
+          <div class="funnel-bar-wrap">
+            <div class="funnel-bar" style="width:__FUNNEL_TEST_CSS__; background: linear-gradient(90deg, #ffa726, #ffcc80); min-width: 60px;">__FUNNEL_TEST_LABEL__</div>
+          </div>
+          <div class="funnel-count">__TEST_TOTAL__</div>
+          <div class="funnel-pct">__FUNNEL_TEST_PCT__</div>
+        </div>
+        <div class="funnel-step">
+          <div class="funnel-label" style="color: var(--accent); font-weight:700;">In Play</div>
+          <div class="funnel-bar-wrap">
+            <div class="funnel-bar" style="width:__FUNNEL_INPLAY_CSS__; background: linear-gradient(90deg, #66bb6a, #a5d6a7); min-width: 45px;">__FUNNEL_INPLAY_LABEL__</div>
+          </div>
+          <div class="funnel-count" style="color:var(--positive)">__IN_PLAY_TOTAL__</div>
+          <div class="funnel-pct">__FUNNEL_INPLAY_PCT__</div>
+        </div>
+      </div>
+      <div style="margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border);">
+        <div class="card-title" style="margin-bottom: 10px;">Outcome breakdown</div>
+        <div class="rate-meter">
+          <div class="rate-row">
+            <div class="rate-label">Rejection</div>
+            <div class="rate-track"><div class="rate-fill" style="width:__OUTCOME_REJECTION_PCT__; background: var(--danger);"></div></div>
+            <div class="rate-pct">__OUTCOME_REJECTION_PCT__</div>
+          </div>
+          <div class="rate-row">
+            <div class="rate-label">Poor fit (self)</div>
+            <div class="rate-track"><div class="rate-fill" style="width:__OUTCOME_SNHA_PCT__; background: #ef5350aa;"></div></div>
+            <div class="rate-pct">__OUTCOME_SNHA_PCT__</div>
+          </div>
+          <div class="rate-row">
+            <div class="rate-label">Withdrew</div>
+            <div class="rate-track"><div class="rate-fill" style="width:__OUTCOME_WITHDRAW_PCT__; background: var(--warning);"></div></div>
+            <div class="rate-pct">__OUTCOME_WITHDRAW_PCT__</div>
+          </div>
+          <div class="rate-row">
+            <div class="rate-label">NMF / Ghosted</div>
+            <div class="rate-track"><div class="rate-fill" style="width:__OUTCOME_NMF_PCT__; background: var(--text-dim);"></div></div>
+            <div class="rate-pct">__OUTCOME_NMF_PCT__</div>
+          </div>
+          <div class="rate-row">
+            <div class="rate-label">Still active</div>
+            <div class="rate-track"><div class="rate-fill" style="width:__OUTCOME_INPLAY_PCT__; background: var(--positive);"></div></div>
+            <div class="rate-pct" style="color:var(--positive)">__OUTCOME_INPLAY_PCT__</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PHASE COMPARISON + RESPONSE RATE CHART -->
+  <div class="grid-2" style="margin-bottom:16px;">
+    <div class="card">
+      <div class="card-title">Strategy Phase Comparison</div>
+      <div class="phase-compare">
+        <div class="phase-box linkedin-box">
+          <div class="phase-box-label">LinkedIn Era</div>
+          <div class="phase-stat">
+            <span class="phase-stat-label">Applications</span>
+            <span class="phase-stat-val">__LI_APPS__</span>
+          </div>
+          <div class="phase-stat">
+            <span class="phase-stat-label">Response rate</span>
+            <span class="phase-stat-val">__LI_RESPONSE_RATE__</span>
+          </div>
+          <div class="phase-stat">
+            <span class="phase-stat-label">Advancement rate</span>
+            <span class="phase-stat-val">__LI_ADV_RATE__</span>
+          </div>
+          <div class="phase-stat">
+            <span class="phase-stat-label">Recruiter contacts</span>
+            <span class="phase-stat-val">__LI_RECRUITER__</span>
+          </div>
+          <div class="phase-stat">
+            <span class="phase-stat-label">Tests taken</span>
+            <span class="phase-stat-val">__LI_TEST__</span>
+          </div>
+          <div class="phase-stat">
+            <span class="phase-stat-label">Poor fit (self-flagged)</span>
+            <span class="phase-stat-val" style="color: var(--danger)">__LI_SNHA_PCT_VAL__</span>
+          </div>
+          <div class="phase-stat">
+            <span class="phase-stat-label">Withdrew</span>
+            <span class="phase-stat-val">__LI_WITHDRAW__</span>
+          </div>
+        </div>
+        <div class="phase-box new-box">
+          <div class="phase-box-label">New Strategy</div>
+          <div class="phase-stat">
+            <span class="phase-stat-label">Applications</span>
+            <span class="phase-stat-val">__NS_APPS__ <span class="diff diff-down">__NS_APPS_DIFF__</span></span>
+          </div>
+          <div class="phase-stat">
+            <span class="phase-stat-label">Response rate</span>
+            <span class="phase-stat-val" style="color:var(--positive)">__NS_RESPONSE_RATE__ <span class="diff diff-up">__NS_RESP_DIFF__</span></span>
+          </div>
+          <div class="phase-stat">
+            <span class="phase-stat-label">Advancement rate</span>
+            <span class="phase-stat-val" style="color:var(--positive)">__NS_ADV_RATE__ <span class="diff diff-up">__NS_ADV_DIFF__</span></span>
+          </div>
+          <div class="phase-stat">
+            <span class="phase-stat-label">Recruiter contacts</span>
+            <span class="phase-stat-val">__NS_RECRUITER__ <span class="diff diff-up">same volume</span></span>
+          </div>
+          <div class="phase-stat">
+            <span class="phase-stat-label">Tests taken</span>
+            <span class="phase-stat-val" style="color:var(--positive)">__NS_TEST__ <span class="diff diff-up">__NS_TEST_DIFF__</span></span>
+          </div>
+          <div class="phase-stat">
+            <span class="phase-stat-label">Poor fit (self-flagged)</span>
+            <span class="phase-stat-val" style="color:var(--positive)">__NS_SNHA_PCT_VAL__ <span class="diff diff-up">__NS_SNHA_DIFF__</span></span>
+          </div>
+          <div class="phase-stat">
+            <span class="phase-stat-label">Withdrew</span>
+            <span class="phase-stat-val">__NS_WITHDRAW__ <span class="diff diff-neutral">more selective</span></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Response Rate by Month <span class="tag">recruiter + hiring + test / apps</span></div>
+      <div class="chart-wrap" style="height: 240px;">
+        <canvas id="responseRateChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- ROLE BREAKDOWN + MONTHLY TABLE -->
+  <div class="grid-2" style="margin-bottom:16px;">
+    <div class="card">
+      <div class="card-title">Role Targeting <span class="tag">LinkedIn era vs New strategy</span></div>
+      <div class="role-list">
+        <!-- role, linkedin count, new count, max=120 -->
+        <div style="display:flex; gap:8px; font-size:10px; color:var(--text-dim); margin-bottom:4px; padding-left:130px;">
+          <span style="display:inline-block;width:8px;height:8px;background:#5b6fa8;border-radius:2px;vertical-align:middle;margin-right:4px;"></span>LinkedIn
+          &nbsp;&nbsp;
+          <span style="display:inline-block;width:8px;height:8px;background:#7c6af7;border-radius:2px;vertical-align:middle;margin-right:4px;"></span>New
+        </div>
+        <script>
+          const roles = __ROLES_JSON__;
+          const maxVal = 120;
+          document.addEventListener('DOMContentLoaded', () => {
+            const container = document.querySelector('.role-list');
+            // Remove the script tag placeholder rows and render properly
+            roles.forEach(r => {
+              const el = document.createElement('div');
+              el.className = 'role-item';
+              const liW = (r.li / maxVal * 100).toFixed(1);
+              const nsW = (r.ns / maxVal * 100).toFixed(1);
+              const change = r.ns - r.li;
+              const changeHtml = change > 5
+                ? `<span class="diff diff-up">+${change}</span>`
+                : change < -5
+                  ? `<span class="diff diff-down">${change}</span>`
+                  : `<span class="diff diff-neutral">${change > 0 ? '+' : ''}${change}</span>`;
+              el.innerHTML = `
+                <div class="role-name">${r.name}</div>
+                <div class="role-bars">
+                  <div class="role-bar-row">
+                    <div class="role-bar-seg" style="width:${liW}%; background:#5b6fa8; height:9px; border-radius:2px;"></div>
+                    <span style="font-size:11px; color:#8892b0; margin-left:5px;">${r.li}</span>
+                  </div>
+                  <div class="role-bar-row">
+                    <div class="role-bar-seg" style="width:${nsW}%; background:#7c6af7; height:9px; border-radius:2px;"></div>
+                    <span style="font-size:11px; color:var(--accent); margin-left:5px;">${r.ns}</span>
+                  </div>
+                </div>
+                <div style="width:52px; text-align:right;">${changeHtml}</div>
+              `;
+              container.appendChild(el);
+            });
+          });
+        </script>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Monthly Breakdown Table</div>
+      <table class="stat-table">
+        <thead>
+          <tr>
+            <th>Month</th>
+            <th class="right">Apps</th>
+            <th class="right">Rec</th>
+            <th class="right">Hire</th>
+            <th class="right">Test</th>
+            <th class="right">Rej</th>
+            <th class="right">SNHA</th>
+            <th class="right">Rate</th>
+          </tr>
+        </thead>
+        <tbody id="monthlyTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- RESUME IMPACT -->
+  <div class="section-label">Resume Specialization Impact (__RESUME_MONTH__)</div>
+  <div class="grid-4" style="margin-bottom:16px;">
+    <div class="card" style="grid-column: span 2;">
+      <div class="card-title">Pre vs Post Specialized Resumes</div>
+      <div class="chart-wrap" style="height:160px;">
+        <canvas id="resumeChart"></canvas>
+      </div>
+    </div>
+    <div class="card" style="grid-column: span 2; display:flex; flex-direction:column; gap:10px;">
+      <div class="card-title">Specialized Resume Files</div>
+      <div style="display:flex; flex-direction:column; gap:8px;">
+        <div style="background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-sm); padding:10px 14px; display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <div style="font-size:12px; font-weight:600; color:var(--text);">General / Core</div>
+            <div style="font-size:11px; color:var(--text-dim);">Resume_Tracey_Martin_2026</div>
+          </div>
+          <span class="pill pill-resume">Active</span>
+        </div>
+        <div style="background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-sm); padding:10px 14px; display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <div style="font-size:12px; font-weight:600; color:var(--text);">Implementation Engineering</div>
+            <div style="font-size:11px; color:var(--text-dim);">Resume_Tracey_Martin_Implementation</div>
+          </div>
+          <span class="pill pill-resume">Active</span>
+        </div>
+        <div style="background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-sm); padding:10px 14px; display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <div style="font-size:12px; font-weight:600; color:var(--text);">Integration Management</div>
+            <div style="font-size:11px; color:var(--text-dim);">Resume_Tracey_Martin_Integration_Mang</div>
+          </div>
+          <span class="pill pill-resume">Active</span>
+        </div>
+        <div style="background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-sm); padding:10px 14px; display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <div style="font-size:12px; font-weight:600; color:var(--text);">Technical Program Manager</div>
+            <div style="font-size:11px; color:var(--text-dim);">Resume_Tracey_Martin_TPM</div>
+          </div>
+          <span class="pill pill-resume">Active</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- INSIGHTS -->
+  <div class="section-label">Key Insights</div>
+  <div class="insights-grid" style="margin-bottom: 24px;">
+    __INSIGHTS_HTML__
+  </div>
+
+</div>
+
+<footer>__FOOTER__</footer>
+
+<script>
+const monthlyData = __MONTHLY_DATA_JSON__;
+
+const months = Object.keys(monthlyData);
+const labels = __LABELS_JSON__;
+
+// Phase background colors for charts
+const liMonths = __LI_MONTHS_JSON__;
+const phaseColors = months.map((m,i) => liMonths.includes(m) ? 'rgba(91,111,168,0.07)' : (monthlyData[m] && m === months[liMonths.length]) ? 'rgba(74,82,112,0.05)' : 'rgba(124,106,247,0.07)');
+
+// Monthly chart
+const ctx1 = document.getElementById('monthlyChart').getContext('2d');
+new Chart(ctx1, {
+  type: 'bar',
+  data: {
+    labels,
+    datasets: [
+      {
+        label: 'Applications',
+        data: months.map(m => monthlyData[m].apps),
+        backgroundColor: months.map((m,i) => liMonths.includes(m) ? 'rgba(91,111,168,0.5)' : (i === liMonths.length) ? 'rgba(74,82,112,0.4)' : 'rgba(124,106,247,0.5)'),
+        borderColor: months.map((m,i) => liMonths.includes(m) ? '#5b6fa8' : (i === liMonths.length) ? '#4a5270' : '#7c6af7'),
+        borderWidth: 1,
+        borderRadius: 4,
+        order: 2,
+        yAxisID: 'y',
+      },
+      {
+        label: 'Recruiter',
+        data: months.map(m => monthlyData[m].recruiter),
+        type: 'line',
+        borderColor: '#4fc3f7',
+        backgroundColor: 'rgba(79,195,247,0.15)',
+        borderWidth: 2,
+        pointRadius: 3,
+        tension: 0.3,
+        order: 1,
+        yAxisID: 'y1',
+      },
+      {
+        label: 'Hiring',
+        data: months.map(m => monthlyData[m].hiring),
+        type: 'line',
+        borderColor: '#66bb6a',
+        backgroundColor: 'transparent',
+        borderWidth: 2,
+        pointRadius: 3,
+        tension: 0.3,
+        order: 1,
+        yAxisID: 'y1',
+      },
+      {
+        label: 'Test',
+        data: months.map(m => monthlyData[m].test),
+        type: 'line',
+        borderColor: '#ffa726',
+        backgroundColor: 'transparent',
+        borderWidth: 2,
+        pointRadius: 3,
+        tension: 0.3,
+        order: 1,
+        yAxisID: 'y1',
+      },
+    ]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: { mode: 'index', intersect: false },
+    plugins: {
+      legend: {
+        labels: { color: '#8892b0', font: { size: 11 }, boxWidth: 12, padding: 12 }
+      },
+      tooltip: {
+        backgroundColor: '#1a1d27',
+        borderColor: '#2e3250',
+        borderWidth: 1,
+        titleColor: '#e8eaf6',
+        bodyColor: '#8892b0',
+      }
+    },
+    scales: {
+      x: {
+        ticks: { color: '#8892b0', font: { size: 10 } },
+        grid: { color: 'rgba(46,50,80,0.5)' },
+        border: { color: '#2e3250' }
+      },
+      y: {
+        position: 'left',
+        ticks: { color: '#8892b0', font: { size: 10 } },
+        grid: { color: 'rgba(46,50,80,0.5)' },
+        border: { color: '#2e3250' },
+        title: { display: true, text: 'Apps', color: '#4a5270', font: { size: 10 } }
+      },
+      y1: {
+        position: 'right',
+        ticks: { color: '#8892b0', font: { size: 10 } },
+        grid: { display: false },
+        border: { color: '#2e3250' },
+        title: { display: true, text: 'Contacts', color: '#4a5270', font: { size: 10 } }
+      }
+    }
+  }
+});
+
+// Response rate chart
+const ctx2 = document.getElementById('responseRateChart').getContext('2d');
+const responseRates = months.map(m => {
+  const d = monthlyData[m];
+  return d.apps > 0 ? +((d.recruiter + d.hiring + d.test) / d.apps * 100).toFixed(1) : 0;
+});
+
+new Chart(ctx2, {
+  type: 'bar',
+  data: {
+    labels,
+    datasets: [{
+      label: 'Response Rate %',
+      data: responseRates,
+      backgroundColor: months.map((m,i) => {
+        const r = responseRates[i];
+        if (liMonths.includes(m)) return r > 10 ? 'rgba(91,111,168,0.8)' : 'rgba(91,111,168,0.4)';
+        if (i === liMonths.length) return 'rgba(74,82,112,0.3)';
+        return r > 10 ? 'rgba(124,106,247,0.85)' : 'rgba(124,106,247,0.45)';
+      }),
+      borderColor: months.map((m,i) => liMonths.includes(m) ? '#5b6fa8' : (i === liMonths.length) ? '#4a5270' : '#7c6af7'),
+      borderWidth: 1,
+      borderRadius: 4,
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: '#1a1d27',
+        borderColor: '#2e3250',
+        borderWidth: 1,
+        titleColor: '#e8eaf6',
+        bodyColor: '#8892b0',
+        callbacks: {
+          label: ctx => `${ctx.raw}% response rate (${monthlyData[months[ctx.dataIndex]].apps} apps)`
+        }
+      },
+      annotation: {}
+    },
+    scales: {
+      x: {
+        ticks: { color: '#8892b0', font: { size: 10 } },
+        grid: { color: 'rgba(46,50,80,0.5)' },
+        border: { color: '#2e3250' }
+      },
+      y: {
+        ticks: { color: '#8892b0', font: { size: 10 }, callback: v => v + '%' },
+        grid: { color: 'rgba(46,50,80,0.5)' },
+        border: { color: '#2e3250' }
+      }
+    }
+  }
+});
+
+// Resume impact chart
+const ctx3 = document.getElementById('resumeChart').getContext('2d');
+new Chart(ctx3, {
+  type: 'bar',
+  data: {
+    labels: ['Applications', 'Response Rate', 'Advancement Rate'],
+    datasets: [
+      {
+        label: 'Pre-resume (Jan 2026)',
+        data: [__PRE_APPS__, __PRE_RESPONSE_RATE__, __PRE_ADV_RATE__],
+        backgroundColor: 'rgba(91,111,168,0.6)',
+        borderColor: '#5b6fa8',
+        borderWidth: 1,
+        borderRadius: 4,
+      },
+      {
+        label: 'Specialized resumes (Feb+ 2026)',
+        data: [__POST_APPS__, __POST_RESPONSE_RATE__, __POST_ADV_RATE__],
+        backgroundColor: 'rgba(102,187,106,0.6)',
+        borderColor: '#66bb6a',
+        borderWidth: 1,
+        borderRadius: 4,
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        labels: { color: '#8892b0', font: { size: 11 }, boxWidth: 12 }
+      },
+      tooltip: {
+        backgroundColor: '#1a1d27',
+        borderColor: '#2e3250',
+        borderWidth: 1,
+        titleColor: '#e8eaf6',
+        bodyColor: '#8892b0',
+      }
+    },
+    scales: {
+      x: {
+        ticks: { color: '#8892b0', font: { size: 11 } },
+        grid: { color: 'rgba(46,50,80,0.5)' },
+        border: { color: '#2e3250' }
+      },
+      y: {
+        ticks: { color: '#8892b0', font: { size: 10 } },
+        grid: { color: 'rgba(46,50,80,0.5)' },
+        border: { color: '#2e3250' }
+      }
+    }
+  }
+});
+
+// Monthly table
+const tableBody = document.getElementById('monthlyTableBody');
+const monthLabels = __MONTH_LABELS_JSON__;
+
+const phaseLabel = (m) => {
+  const resumeMonths = months.filter(x => !liMonths.includes(x) && x !== months[liMonths.length]);
+  const resumeStart = __RESUME_START_IDX__;
+  const idx = months.indexOf(m);
+  if (liMonths.includes(m)) return '<span class="pill pill-linkedin">LinkedIn</span>';
+  if (idx === liMonths.length) return '<span class="pill pill-trans">Transition</span>';
+  if (idx >= resumeStart) return '<span class="pill pill-resume">+Resume</span>';
+  return '<span class="pill pill-new">New</span>';
+};
+
+months.forEach(m => {
+  const d = monthlyData[m];
+  const rate = d.apps > 0 ? ((d.recruiter + d.hiring + d.test) / d.apps * 100).toFixed(0) : 0;
+  const rateColor = rate >= 15 ? 'color:var(--positive); font-weight:700;' :
+                    rate >= 8 ? 'color:var(--accent);' :
+                    rate == 0 ? 'color:var(--text-dim);' : '';
+  const row = document.createElement('tr');
+  row.innerHTML = `
+    <td class="month">${monthLabels[m] || m} ${phaseLabel(m)}</td>
+    <td class="right">${d.apps}</td>
+    <td class="right" style="${d.recruiter > 0 ? 'color:var(--accent2);' : 'color:var(--text-dim);'}">${d.recruiter}</td>
+    <td class="right" style="${d.hiring > 0 ? 'color:var(--positive);' : 'color:var(--text-dim);'}">${d.hiring}</td>
+    <td class="right" style="${d.test > 0 ? 'color:var(--warning); font-weight:700;' : 'color:var(--text-dim);'}">${d.test}</td>
+    <td class="right" style="${d.rejection > 20 ? 'color:var(--danger);' : 'color:var(--text-muted);'}">${d.rejection}</td>
+    <td class="right" style="${d.snha > 30 ? 'color:var(--danger);' : d.snha > 10 ? 'color:var(--warning);' : 'color:var(--text-muted);'}">${d.snha}</td>
+    <td class="right" style="${rateColor}">${rate}%</td>
+  `;
+  tableBody.appendChild(row);
+});
+</script>
+</body>
+</html>
