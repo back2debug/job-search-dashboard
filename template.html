@@ -551,6 +551,94 @@
     flex-shrink: 0;
   }
 
+  /* OUTCOME REASONS */
+  .reason-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .reason-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .reason-label {
+    flex: 0 0 auto;
+    width: 180px;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  .reason-track {
+    flex: 1;
+    height: 10px;
+    background: var(--surface2);
+    border-radius: 5px;
+    overflow: hidden;
+  }
+
+  .reason-fill {
+    height: 100%;
+    border-radius: 5px;
+  }
+
+  .reason-count {
+    width: 24px;
+    text-align: right;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .reason-pct {
+    width: 36px;
+    text-align: right;
+    font-size: 11px;
+    color: var(--text-dim);
+  }
+
+  .reason-quotes {
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+  }
+
+  .reason-quotes-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-dim);
+    margin-bottom: 8px;
+  }
+
+  .reason-quote {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-style: italic;
+    padding: 5px 0;
+    border-bottom: 1px solid rgba(46, 50, 80, 0.4);
+    line-height: 1.4;
+  }
+
+  .reason-quote:last-child { border-bottom: none; }
+
+  .reason-quote-count {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--accent);
+    background: rgba(124, 106, 247, 0.12);
+    border: 1px solid rgba(124, 106, 247, 0.3);
+    border-radius: 10px;
+    padding: 1px 7px;
+    margin-right: 6px;
+    font-style: normal;
+    vertical-align: 1px;
+  }
+
   /* IN PLAY ALERT */
   .inplay-alert {
     background: linear-gradient(135deg, rgba(124,106,247,0.12) 0%, rgba(79,195,247,0.08) 100%);
@@ -997,6 +1085,31 @@
           </div>
           <span class="pill pill-resume">Active</span>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- OUTCOME REASONS -->
+  <div class="section-label">Outcome Reasons — Why Opportunities Ended</div>
+  <div class="grid-2" style="margin-bottom:16px;">
+    <div class="card">
+      <div class="card-title">Not Moving Forward — Employer Feedback <span class="tag">__NMF_TOTAL__ explicit reasons</span></div>
+      <div class="reason-list">
+      __NMF_REASONS_HTML__
+      </div>
+      <div class="reason-quotes">
+        <div class="reason-quotes-label">Recurring feedback</div>
+      __NMF_QUOTES_HTML__
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Withdraw — Reasons You Walked Away <span class="tag">__WITHDRAW_TOTAL_OUT__ withdrawals</span></div>
+      <div class="reason-list">
+      __WITHDRAW_REASONS_HTML__
+      </div>
+      <div class="reason-quotes">
+        <div class="reason-quotes-label">Most common triggers</div>
+      __WITHDRAW_QUOTES_HTML__
       </div>
     </div>
   </div>

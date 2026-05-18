@@ -116,6 +116,123 @@ def has_flag(val) -> bool:
         return False
     return str(val).strip() != ""
 
+# ── Outcome-reason categorization (NMF + Withdraw comments) ───────────────────
+# Each category is (label, [keywords]). The first matching category wins,
+# so order = priority. Keywords are matched case-insensitively as substrings.
+# Categories are intentionally generic — edit the keywords below to fit
+# whatever feedback patterns show up in your own data.
+
+NMF_CATEGORIES = [
+    ("Background / experience fit", [
+        "client consulting", "not right background", "lack influence",
+        "wrong background", "more it", "it-ish",
+    ]),
+    ("Role / scope mismatch", [
+        "project manager", "looking for", "more strategy",
+    ]),
+    ("Skill / tech stack gap", [
+        "js experience", "javascript", "frontend", "fronted",
+        "tech stack", "wrong stack",
+    ]),
+    ("Lost to other candidate", [
+        "further along", "accepted",
+    ]),
+    ("Logistics", ["location", "relocat", "remote"]),
+]
+
+WITHDRAW_CATEGORIES = [
+    ("Compensation", ["salary", "low pay", "underpaid"]),
+    ("Tech / stack mismatch", [
+        "tech stack", "wrong stack", "adtech", "zapier", "java",
+        "it-ish", "more it",
+    ]),
+    ("Role / scope mismatch", [
+        "not technical", "not really technical", "business user",
+        "more strategy", "managing", "not qualified",
+    ]),
+    ("Recruiter / process issues", [
+        "recruiter", "weird test", "test was not", "no comms",
+        "comms", "ghosted", "hackerrank",
+    ]),
+    ("Red flags / culture", ["red flag", "glassdoor", "changing the job"]),
+    ("Work conditions", ["weekend", "on call", "schedule"]),
+]
+
+
+def classify_reason(val, categories):
+    """Classify a comment cell into a category label.
+
+    Returns "Unknown" for empty/NaN/just-'x'/no-reason placeholders.
+    Returns "Other" when none of the category keywords match.
+    """
+    if pd.isna(val):
+        return None
+    text = str(val).strip()
+    if not text:
+        return None
+    low = text.lower()
+    if low in ("x", "no reason provided", "no reason given", "no reason", "n/a", "none"):
+        return "Unknown"
+    for label, keywords in categories:
+        if any(kw in low for kw in keywords):
+            return label
+    return "Other"
+
+
+def categorize_reasons(df, column, categories):
+    """Categorize all non-empty comments in `column`.
+
+    Returns dict with:
+      - ordered: list of (label, count) in category-definition order,
+                 then Other, then Unknown. Empty categories are omitted.
+      - top_quotes: list of (quote, count) for the most-recurring verbatim
+                    quotes (lowercased+stripped grouping). Top 3 with count >= 1.
+      - with_comment: int — entries whose comment was more than just 'x'.
+    """
+    series = df[column].dropna()
+    labels = [classify_reason(v, categories) for v in series]
+
+    # Count per category, preserving definition order
+    counts = {}
+    for lab in labels:
+        if lab is None:
+            continue
+        counts[lab] = counts.get(lab, 0) + 1
+
+    ordered = []
+    for label, _ in categories:
+        if counts.get(label, 0) > 0:
+            ordered.append((label, counts[label]))
+    for tail in ("Other", "Unknown"):
+        if counts.get(tail, 0) > 0:
+            ordered.append((tail, counts[tail]))
+
+    # Group recurring verbatim quotes (substantive comments only)
+    quote_counts = {}
+    quote_originals = {}
+    for v in series:
+        text = str(v).strip()
+        if not text:
+            continue
+        low = text.lower().rstrip(".! ")
+        if low in ("x", "no reason provided", "no reason given", "no reason", "n/a", "none"):
+            continue
+        quote_counts[low] = quote_counts.get(low, 0) + 1
+        # Keep the first-seen original casing
+        quote_originals.setdefault(low, text)
+
+    top_quotes = sorted(quote_counts.items(), key=lambda kv: (-kv[1], kv[0]))[:3]
+    top_quotes = [(quote_originals[low], n) for low, n in top_quotes]
+
+    with_comment = sum(1 for v in series if str(v).strip().lower() not in ("", "x"))
+
+    return {
+        "ordered":      ordered,
+        "top_quotes":   top_quotes,
+        "with_comment": with_comment,
+    }
+
+
 # ── Compute stats ─────────────────────────────────────────────────────────────
 
 def compute_stats(df: pd.DataFrame) -> dict:
@@ -330,6 +447,16 @@ def compute_stats(df: pd.DataFrame) -> dict:
     # If no roles matched (no parseable title data), use empty list
     s["roles"] = roles
 
+    # ── Outcome reasons (NMF / Withdraw comment analysis) ──────────────────────
+    nmf_categorized = categorize_reasons(df, "Not Moving forward", NMF_CATEGORIES)
+    wd_categorized  = categorize_reasons(df, "Withdraw",           WITHDRAW_CATEGORIES)
+    s["nmf_reasons"]      = nmf_categorized["ordered"]
+    s["nmf_top_quotes"]   = nmf_categorized["top_quotes"]
+    s["nmf_with_comment"] = nmf_categorized["with_comment"]
+    s["wd_reasons"]       = wd_categorized["ordered"]
+    s["wd_top_quotes"]    = wd_categorized["top_quotes"]
+    s["wd_with_comment"]  = wd_categorized["with_comment"]
+
     # ── Month labels ───────────────────────────────────────────────────────────
     s["month_labels"] = {m: fmt_month(m) for m in all_months}
 
@@ -408,6 +535,53 @@ def compute_stats(df: pd.DataFrame) -> dict:
     s["ns_snha_diff"]  = diff_pct(s["ns_snha_pct"], s["li_snha_pct"])
 
     return s
+
+
+# ── Build outcome-reason HTML (NMF / Withdraw) ─────────────────────────────────
+
+def _html_escape(text: str) -> str:
+    return (str(text)
+            .replace("&", "&amp;")
+            .replace("<", "&lt;")
+            .replace(">", "&gt;")
+            .replace('"', "&quot;"))
+
+
+def build_reasons_html(ordered, total, fill_color):
+    """Render category bars for an outcome-reason card."""
+    if not ordered:
+        return '<div style="color:var(--text-dim); font-size:12px; padding:6px 0;">No categorized reasons yet.</div>'
+    parts = []
+    for label, count in ordered:
+        pct = (count / total * 100) if total else 0
+        bar_color = "var(--text-dim)" if label in ("Unknown", "Other") else fill_color
+        parts.append(
+            '<div class="reason-row">'
+            f'<div class="reason-label">{_html_escape(label)}</div>'
+            f'<div class="reason-track"><div class="reason-fill" '
+            f'style="width:{pct:.1f}%; background:{bar_color};"></div></div>'
+            f'<div class="reason-count">{count}</div>'
+            f'<div class="reason-pct">{pct:.0f}%</div>'
+            '</div>'
+        )
+    return "\n      ".join(parts)
+
+
+def build_quotes_html(top_quotes):
+    """Render the 'recurring feedback' list under each reason card."""
+    if not top_quotes:
+        return ('<div style="color:var(--text-dim); font-size:12px; font-style:italic;">'
+                'No recurring verbatim feedback.</div>')
+    parts = []
+    for quote, count in top_quotes:
+        # Truncate long quotes for readability
+        display = quote if len(quote) <= 110 else quote[:107] + "…"
+        count_badge = (f'<span class="reason-quote-count">×{count}</span>'
+                       if count > 1 else '')
+        parts.append(
+            f'<div class="reason-quote">{count_badge}"{_html_escape(display)}"</div>'
+        )
+    return "\n      ".join(parts)
 
 
 # ── Build insights HTML ────────────────────────────────────────────────────────
@@ -537,7 +711,35 @@ def build_insights_html(s: dict) -> str:
              "Role targeting shift between phases",
              "Role classification data not available — add a Title/Role column to the spreadsheet for this insight.")
 
-    # 8. Platform exit validation
+    # 8. Self-filter vs employer-filter balance
+    wd_total  = s["withdraw_total"]
+    nmf_total = s["nmf_total"]
+    wd_reasons  = s.get("wd_reasons", [])
+    nmf_reasons = s.get("nmf_reasons", [])
+    if wd_total or nmf_total:
+        top_wd  = wd_reasons[0][0]  if wd_reasons  else None
+        top_nmf = nmf_reasons[0][0] if nmf_reasons else None
+        if wd_total > nmf_total:
+            headline = (f"You walked away from <strong>{wd_total}</strong> opportunities "
+                        f"vs. <strong>{nmf_total}</strong> employer rejections — "
+                        f"you're self-filtering more than you're being filtered out.")
+        elif wd_total == nmf_total:
+            headline = (f"Withdrawals (<strong>{wd_total}</strong>) and not-moving-forward "
+                        f"(<strong>{nmf_total}</strong>) are roughly balanced.")
+        else:
+            headline = (f"Employer rejections (<strong>{nmf_total}</strong>) outpace "
+                        f"your withdrawals (<strong>{wd_total}</strong>) — "
+                        f"the bottleneck is screening, not selectivity.")
+        bits = [headline]
+        if top_wd:
+            bits.append(f"Top withdraw trigger: <strong>{top_wd}</strong>.")
+        if top_nmf:
+            bits.append(f"Top employer-side gap: <strong>{top_nmf}</strong>.")
+        card("highlight", "🎚️",
+             "Self-filter vs. employer-filter balance",
+             " ".join(bits))
+
+    # 9. Platform exit validation
     zero_months = s.get("li_zero_resp_months", [])
     li_snha_str = f"{s['li_snha_pct']:.1f}%"
     if zero_months:
@@ -660,6 +862,13 @@ def render(s: dict, template_path: str) -> str:
         "__POST_APPS__":              str(s["post_apps"]),
         "__POST_RESPONSE_RATE__":     f"{s['post_response_rate']:.1f}",
         "__POST_ADV_RATE__":          f"{s['post_adv_rate']:.1f}",
+        # Outcome reasons (NMF / Withdraw)
+        "__NMF_TOTAL__":              str(s["nmf_total"]),
+        "__WITHDRAW_TOTAL_OUT__":     str(s["withdraw_total"]),
+        "__NMF_REASONS_HTML__":       build_reasons_html(s["nmf_reasons"],   s["nmf_total"],      "var(--danger)"),
+        "__WITHDRAW_REASONS_HTML__":  build_reasons_html(s["wd_reasons"],    s["withdraw_total"], "var(--warning)"),
+        "__NMF_QUOTES_HTML__":        build_quotes_html(s["nmf_top_quotes"]),
+        "__WITHDRAW_QUOTES_HTML__":   build_quotes_html(s["wd_top_quotes"]),
         # Insights HTML
         "__INSIGHTS_HTML__":          build_insights_html(s),
         # Footer

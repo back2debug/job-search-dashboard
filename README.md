@@ -15,7 +15,8 @@ A local dashboard that reads your job application spreadsheet (`.ods`) and gener
 - **Role targeting shift** — how the roles you applied to changed over time
 - **Resume specialization impact** — pre vs. post specialized resumes
 - **Monthly breakdown table** — every month with color-coded signals
-- **8 insight cards** — auto-generated from your actual data
+- **Outcome reasons** — categorized analysis of "Not Moving Forward" and "Withdraw" comments, with recurring themes and example feedback
+- **9 insight cards** — auto-generated from your actual data
 
 ---
 
@@ -74,10 +75,12 @@ Leave this running while you update your spreadsheet. Every time you save, the d
 | **Rejection** | Mark `x` if you received an explicit rejection |
 | **Ghosted** | Mark `x` if they went silent with no response |
 | **Should not have applied** | Mark `x` if you self-identify this as a poor-fit application |
-| **Not Moving forward** | Mark `x` if told they're not moving forward (no formal rejection) |
-| **Withdraw** | Mark `x` if you withdrew your application |
+| **Not Moving forward** | Mark `x` if told they're not moving forward (no formal rejection). Optionally replace `x` with a short comment describing why (e.g. `"More client consulting"`) — the dashboard will categorize and surface recurring themes. |
+| **Withdraw** | Mark `x` if you withdrew your application. Optionally replace `x` with a short comment describing why (e.g. `"Salary too low"`) — the dashboard will categorize and surface recurring triggers. |
 
 > Flag columns use `x` to mark — leave the cell empty otherwise. Multiple flags can be set on the same row (e.g. Recruiter + Rejection if you got a rejection after a recruiter screen).
+>
+> **Comment-aware columns:** `Not Moving forward` and `Withdraw` accept free-text comments in place of `x`. The dashboard groups them into themes (compensation, tech stack, background fit, etc.). To tune the categories or keywords, edit `NMF_CATEGORIES` and `WITHDRAW_CATEGORIES` near the top of `generate.py`.
 
 ---
 
