@@ -182,9 +182,3 @@ Files intentionally excluded from this repo (see `.gitignore`):
 - All data stays local. Nothing is sent anywhere.
 
 ---
-
-<div align="center">
-
-✨ Built with [Claude Code](https://claude.ai/code) ✨
-
-</div>
